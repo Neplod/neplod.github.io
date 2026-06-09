@@ -5,7 +5,6 @@ import pygame
 import random
 import math
 
-os.environ.setdefault("SDL_VIDEODRIVER", "browser")
 os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 
 print('Inicializando pygame...')

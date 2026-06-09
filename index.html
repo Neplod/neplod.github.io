@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.29.0/full/pyodide.js"></script>
+</head>
+<body>
+  <!-- Use whatever canvas dimensions make sense for your project -->
+  <canvas id="canvas" width="640" height="480"></canvas>
+  <script>
+    async function setup() {
+      const canvas = document.getElementById("canvas");
+
+      const pyodide = await loadPyodide();
+      pyodide.canvas.setCanvas2D(canvas);
+
+      await pyodide.loadPackage([
+        "pygame-ce",
+      ]);
+
+      const code = await (await fetch("./pygame-code.py")).text();
+      await pyodide.runPythonAsync(code);
+    }
+
+    setup();
+  </script>
+</body>
+</html>

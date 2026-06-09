@@ -17,11 +17,11 @@
         "pygame-ce",
       ]);
 
-      const code = await (await fetch("./pygame-code.py")).text();
+      const code = await (await fetch("https://raw.githubusercontent.com/Neplod/neplod.github.io/refs/heads/main/pygame-code.py")).text();
       await pyodide.runPythonAsync(code);
     }
 
-    setup();
+    document.addEventListener("DOMContentLoaded", setup);
   </script>
 </body>
 </html>

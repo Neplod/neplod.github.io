@@ -15,7 +15,7 @@
     }
 
     async function setup() {
-      const canvas = document.getElementById("canvas") as HTMLCanvasElement;
+      const canvas = document.getElementById("canvas");
       canvas.style.display = "block";
       canvas.style.margin = "0 auto";
       canvas.style.background = "#000";
@@ -24,7 +24,7 @@
       canvas.width = x;
       canvas.height = y;
 
-      const pyodide = await (window as any).loadPyodide({ stdout: console.log, stderr: console.error });
+      const pyodide = await loadPyodide({ stdout: console.log, stderr: console.error });
       setStatus("Configurando canvas de Pyodide...");
       pyodide.canvas.setCanvas2D(canvas);
 

@@ -1,17 +1,27 @@
+import os
+import sys
+import asyncio
 import pygame
 import random
 import math
 
+os.environ.setdefault("SDL_VIDEODRIVER", "browser")
+os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
+
+print('Inicializando pygame...')
 pygame.init()
+pygame.display.init()
+pygame.font.init()
 try:
     pygame.mixer.init()
 except Exception:
-    pass
+    print('No se pudo iniciar el mezclador de sonido; continuando sin audio.')
 
 # ----------------- CANVAS CONFIG -----------------
 WIDTH, HEIGHT = 640, 480
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Grammar Quest - Zelda RPG")
+print('Pantalla inicializada', WIDTH, HEIGHT)
 
 clock = pygame.time.Clock()
 
@@ -252,116 +262,121 @@ def get_shake():
     return (0, 0)
 
 # ----------------- LOOP -----------------
-running = True
+async def main():
+    global score, lives, question_index, state
+    running = True
 
-while running:
-    clock.tick(60)
-    mouse = pygame.mouse.get_pos()
-    ox, oy = get_shake()
+    while running:
+        clock.tick(60)
+        mouse = pygame.mouse.get_pos()
+        ox, oy = get_shake()
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-
-        if event.type == pygame.MOUSEBUTTONDOWN:
-
-            if state == "menu":
-                if start_btn.collidepoint(event.pos):
-                    state = "game"
-                if quit_btn.collidepoint(event.pos):
-                    running = False
-
-            elif state == "game":
-                q = questions[question_index]
-
-                for i, b in enumerate(buttons):
-                    if b.collidepoint(event.pos):
-
-                        if i == q["correct"]:
-                            score += 1
-                            if correct_sound:
-                                correct_sound.play()
-                        else:
-                            lives -= 1
-                            add_shake(15)
-                            if wrong_sound:
-                                wrong_sound.play()
-
-                        question_index += 1
-
-                        if lives <= 0:
-                            state = "lose"
-                        elif score >= TARGET_SCORE:
-                            state = "win"
-                        elif question_index >= len(questions):
-                            question_index = 0
-                            random.shuffle(questions)
-
-            elif state in ["win", "lose"]:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
                 running = False
 
-    # ----------------- BACKGROUND -----------------
-    draw_forest(screen)
+            if event.type == pygame.MOUSEBUTTONDOWN:
 
-    # ----------------- MENU -----------------
-    if state == "menu":
-        draw_center_text("GRAMMAR QUEST", big_font, WHITE, int(HEIGHT * 0.25))
+                if state == "menu":
+                    if start_btn.collidepoint(event.pos):
+                        state = "game"
+                    if quit_btn.collidepoint(event.pos):
+                        running = False
 
-        pygame.draw.rect(screen, (30, 30, 30), start_btn, border_radius=12)
-        pygame.draw.rect(screen, WHITE, start_btn, 2, border_radius=12)
+                elif state == "game":
+                    q = questions[question_index]
 
-        pygame.draw.rect(screen, (30, 30, 30), quit_btn, border_radius=12)
-        pygame.draw.rect(screen, WHITE, quit_btn, 2, border_radius=12)
+                    for i, b in enumerate(buttons):
+                        if b.collidepoint(event.pos):
 
-        draw_center_text("START", font, WHITE, start_btn.y + start_btn.height//4)
-        draw_center_text("QUIT", font, WHITE, quit_btn.y + quit_btn.height//4)
+                            if i == q["correct"]:
+                                score += 1
+                                if correct_sound:
+                                    correct_sound.play()
+                            else:
+                                lives -= 1
+                                add_shake(15)
+                                if wrong_sound:
+                                    wrong_sound.play()
 
-    # ----------------- GAME -----------------
-    elif state == "game":
-        q = questions[question_index]
+                            question_index += 1
 
-        panel = pygame.Rect(
-            WIDTH//2 - int(450*scale),
-            int(70*scale),
-            int(900*scale),
-            int(600*scale)
-        )
+                            if lives <= 0:
+                                state = "lose"
+                            elif score >= TARGET_SCORE:
+                                state = "win"
+                            elif question_index >= len(questions):
+                                question_index = 0
+                                random.shuffle(questions)
 
-        draw_question_panel(screen, panel)
+                elif state in ["win", "lose"]:
+                    running = False
 
-        # QUESTION TEXT CENTERED INSIDE PANEL
-        q_surf = font.render(q["question"], True, BLACK)
-        screen.blit(
-            q_surf,
-            (panel.centerx - q_surf.get_width() // 2, panel.y + int(30 * scale))
-        )
+        # ----------------- BACKGROUND -----------------
+        draw_forest(screen)
 
-        for i, b in enumerate(buttons):
-            color = (255, 220, 120) if b.collidepoint(mouse) else (220, 220, 220)
+        # ----------------- MENU -----------------
+        if state == "menu":
+            draw_center_text("GRAMMAR QUEST", big_font, WHITE, int(HEIGHT * 0.25))
 
-            pygame.draw.rect(screen, color, b, border_radius=12)
-            pygame.draw.rect(screen, BLACK, b, 2, border_radius=12)
+            pygame.draw.rect(screen, (30, 30, 30), start_btn, border_radius=12)
+            pygame.draw.rect(screen, WHITE, start_btn, 2, border_radius=12)
 
-            txt = font.render(q["answers"][i], True, BLACK)
-            screen.blit(txt, (b.x + int(10 * scale), b.y + int(20 * scale)))
+            pygame.draw.rect(screen, (30, 30, 30), quit_btn, border_radius=12)
+            pygame.draw.rect(screen, WHITE, quit_btn, 2, border_radius=12)
 
-        score_txt = hud_font.render(f"Score: {score}/{TARGET_SCORE}", True, WHITE)
-        screen.blit(score_txt, (int(20 * scale), int(20 * scale)))
+            draw_center_text("START", font, WHITE, start_btn.y + start_btn.height//4)
+            draw_center_text("QUIT", font, WHITE, quit_btn.y + quit_btn.height//4)
 
-        for i in range(max_lives):
-            img = heart_full if i < lives else heart_empty
-            screen.blit(img, (WIDTH - int(200*scale) + i * int(60*scale) + ox, int(20*scale) + oy))
+        # ----------------- GAME -----------------
+        elif state == "game":
+            q = questions[question_index]
 
-    # ----------------- WIN -----------------
-    elif state == "win":
-        draw_center_text("YOU SAVED HYRULE!", big_font, (0, 255, 120), int(HEIGHT * 0.35))
-        draw_center_text(f"Final Score: {score}", font, WHITE, int(HEIGHT * 0.5))
+            panel = pygame.Rect(
+                WIDTH//2 - int(450*scale),
+                int(70*scale),
+                int(900*scale),
+                int(600*scale)
+            )
 
-    # ----------------- LOSE -----------------
-    elif state == "lose":
-        draw_center_text("GAME OVER", big_font, (255, 60, 60), int(HEIGHT * 0.35))
-        draw_center_text(f"Final Score: {score}", font, WHITE, int(HEIGHT * 0.5))
+            draw_question_panel(screen, panel)
 
-    pygame.display.flip()
+            # QUESTION TEXT CENTERED INSIDE PANEL
+            q_surf = font.render(q["question"], True, BLACK)
+            screen.blit(
+                q_surf,
+                (panel.centerx - q_surf.get_width() // 2, panel.y + int(30 * scale))
+            )
 
-pygame.quit()
+            for i, b in enumerate(buttons):
+                color = (255, 220, 120) if b.collidepoint(mouse) else (220, 220, 220)
+
+                pygame.draw.rect(screen, color, b, border_radius=12)
+                pygame.draw.rect(screen, BLACK, b, 2, border_radius=12)
+
+                txt = font.render(q["answers"][i], True, BLACK)
+                screen.blit(txt, (b.x + int(10 * scale), b.y + int(20 * scale)))
+
+            score_txt = hud_font.render(f"Score: {score}/{TARGET_SCORE}", True, WHITE)
+            screen.blit(score_txt, (int(20 * scale), int(20 * scale)))
+
+            for i in range(max_lives):
+                img = heart_full if i < lives else heart_empty
+                screen.blit(img, (WIDTH - int(200*scale) + i * int(60*scale) + ox, int(20*scale) + oy))
+
+        # ----------------- WIN -----------------
+        elif state == "win":
+            draw_center_text("YOU SAVED HYRULE!", big_font, (0, 255, 120), int(HEIGHT * 0.35))
+            draw_center_text(f"Final Score: {score}", font, WHITE, int(HEIGHT * 0.5))
+
+        # ----------------- LOSE -----------------
+        elif state == "lose":
+            draw_center_text("GAME OVER", big_font, (255, 60, 60), int(HEIGHT * 0.35))
+            draw_center_text(f"Final Score: {score}", font, WHITE, int(HEIGHT * 0.5))
+
+        pygame.display.flip()
+        await asyncio.sleep(0)
+
+    pygame.quit()
+
+asyncio.run(main())

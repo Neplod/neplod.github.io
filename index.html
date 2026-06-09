@@ -6,22 +6,50 @@
 <body>
   <!-- Use whatever canvas dimensions make sense for your project -->
   <canvas id="canvas" width="640" height="480"></canvas>
+  <div id="status" style="font-family: sans-serif; color: #fff; text-align: center; margin-top: 12px;"></div>
   <script>
-    async function setup() {
-      const canvas = document.getElementById("canvas");
-
-      const pyodide = await loadPyodide();
-      pyodide.canvas.setCanvas2D(canvas);
-
-      await pyodide.loadPackage([
-        "pygame-ce",
-      ]);
-
-      const code = await (await fetch("https://raw.githubusercontent.com/Neplod/neplod.github.io/refs/heads/main/pygame-code.py")).text();
-      await pyodide.runPythonAsync(code);
+    function setStatus(message) {
+      const status = document.getElementById("status");
+      status.textContent = message;
+      console.log(message);
     }
 
-    document.addEventListener("DOMContentLoaded", setup);
+    async function setup() {
+      const canvas = document.getElementById("canvas");
+      canvas.style.display = "block";
+      canvas.style.margin = "0 auto";
+      canvas.style.border = "1px solid #444";
+      canvas.style.background = "#000";
+
+      const pyodide = await loadPyodide({ stdout: console.log, stderr: console.error });
+      setStatus("Configurando canvas de Pyodide...");
+      pyodide.canvas.setCanvas2D(canvas);
+
+      try {
+        setStatus("Cargando pygame-ce...");
+        await pyodide.loadPackage(["pygame-ce"]);
+      } catch (packageError) {
+        console.error("pygame-ce package load failed", packageError);
+        setStatus("Instalando pygame-ce con micropip...");
+        await pyodide.loadPackage(["micropip"]);
+        await pyodide.runPythonAsync(`
+import micropip
+await micropip.install('pygame-ce')
+`);
+      }
+
+      setStatus("Cargando código de pygame...");
+      const code = await (await fetch("./pygame-code.py")).text();
+      await pyodide.runPythonAsync(code);
+      setStatus("Juego iniciado correctamente.");
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      setup().catch((err) => {
+        console.error("Pyodide setup failed", err);
+        setStatus("Error al iniciar: " + err);
+      });
+    });
   </script>
 </body>
 </html>
